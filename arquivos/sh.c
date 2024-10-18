@@ -73,31 +73,52 @@ runcmd(struct cmd *cmd)
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
       exit(0);
-    /* MARK START task2
-     * TAREFA2: Implemente codigo abaixo para executar
-     * comandos simples. */
-    fprintf(stderr, "exec nao implementado\n");
-    /* MARK END task2 */
+    /* Implementação para executar comandos simples */
+    if (execvp(ecmd->argv[0], ecmd->argv) < 0) {
+      fprintf(stderr, "erro ao executar comando: %s\n", ecmd->argv[0]);
+    }
     break;
 
   case '>':
   case '<':
     rcmd = (struct redircmd*)cmd;
-    /* MARK START task3
-     * TAREFA3: Implemente codigo abaixo para executar
-     * comando com redirecionamento. */
-    fprintf(stderr, "redir nao implementado\n");
-    /* MARK END task3 */
+    int fd = open(rcmd->file, rcmd->mode, S_IRWXU);
+    if (fd < 0) {
+      fprintf(stderr, "erro ao abrir arquivo: %s\n", rcmd->file);
+      exit(-1);
+    }
+    if (dup2(fd, rcmd->fd) < 0) {
+      fprintf(stderr, "erro ao redirecionar fd\n");
+      exit(-1);
+    }
+    close(fd);
     runcmd(rcmd->cmd);
     break;
 
   case '|':
     pcmd = (struct pipecmd*)cmd;
-    /* MARK START task4
-     * TAREFA4: Implemente codigo abaixo para executar
-     * comando com pipes. */
-    fprintf(stderr, "pipe nao implementado\n");
-    /* MARK END task4 */
+    if (pipe(p) < 0) {
+      fprintf(stderr, "erro ao criar pipe\n");
+      exit(-1);
+    }
+    if (fork1() == 0) {
+      close(1);
+      dup(p[1]);
+      close(p[0]);
+      close(p[1]);
+      runcmd(pcmd->left);
+    }
+    if (fork1() == 0) {
+      close(0);
+      dup(p[0]);
+      close(p[0]);
+      close(p[1]);
+      runcmd(pcmd->right);
+    }
+    close(p[0]);
+    close(p[1]);
+    wait(&r);
+    wait(&r);
     break;
   }    
   exit(0);
