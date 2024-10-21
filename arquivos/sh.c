@@ -73,7 +73,7 @@ runcmd(struct cmd *cmd)
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
       exit(0);
-    /* Implementação para executar comandos simples */
+    // implementação para executar comandos simples
     if (execvp(ecmd->argv[0], ecmd->argv) < 0) {
       fprintf(stderr, "erro ao executar comando: %s\n", ecmd->argv[0]);
     }
@@ -82,25 +82,32 @@ runcmd(struct cmd *cmd)
   case '>':
   case '<':
     rcmd = (struct redircmd*)cmd;
+    // abrir o arquivo de redirecionamento
     int fd = open(rcmd->file, rcmd->mode, S_IRWXU);
+    // verificar se o arquivo foi aberto corretamente
     if (fd < 0) {
       fprintf(stderr, "erro ao abrir arquivo: %s\n", rcmd->file);
       exit(-1);
     }
+    // redirecionar o descritor de arquivo
     if (dup2(fd, rcmd->fd) < 0) {
       fprintf(stderr, "erro ao redirecionar fd\n");
       exit(-1);
     }
+    // fechar o descritor de arquivo
     close(fd);
+    // executar o comando
     runcmd(rcmd->cmd);
     break;
 
   case '|':
     pcmd = (struct pipecmd*)cmd;
+    // criar o pipe
     if (pipe(p) < 0) {
       fprintf(stderr, "erro ao criar pipe\n");
       exit(-1);
     }
+    // criar o processo filho para o lado esquerdo do pipe
     if (fork1() == 0) {
       close(1);
       dup(p[1]);
@@ -108,6 +115,7 @@ runcmd(struct cmd *cmd)
       close(p[1]);
       runcmd(pcmd->left);
     }
+    // criar o processo filho para o lado direito do pipe
     if (fork1() == 0) {
       close(0);
       dup(p[0]);
@@ -115,8 +123,10 @@ runcmd(struct cmd *cmd)
       close(p[1]);
       runcmd(pcmd->right);
     }
+    // fechar os descritores de arquivo
     close(p[0]);
     close(p[1]);
+    // esperar os processos filhos
     wait(&r);
     wait(&r);
     break;
